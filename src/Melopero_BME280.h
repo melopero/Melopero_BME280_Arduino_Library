@@ -53,17 +53,22 @@ int8_t i2c_read(uint8_t reg_addr, uint8_t* data, uint32_t len, void* intf_ptr);
 */
 int8_t i2c_write(uint8_t reg_addr, const uint8_t* data, uint32_t len, void* intf_ptr);
 
+struct I2CInterfaceData {
+    uint8_t i2c_address;
+    TwoWire *i2c;
+};
+
 class Melopero_BME280 {
 
     public:
         struct bme280_dev dev;
-        uint8_t dev_address;
+        I2CInterfaceData i2c_interface;
         struct bme280_data data;
 
     public:
         Melopero_BME280();
 
-        int8_t init_device(uint8_t i2c_address = BME280_I2C_ADDR_SEC);
+        int8_t init_device(uint8_t i2c_address = BME280_I2C_ADDR_SEC, TwoWire &bus = Wire);
 
         int8_t set_oversampling(uint8_t pressure_os, uint8_t temperature_os, uint8_t humidity_os);
 

@@ -8,11 +8,11 @@ void delay_us(uint32_t period, void* intf_ptr){
 }
 
 int8_t i2c_read(uint8_t reg_addr, uint8_t* data, uint32_t len, void* intf_ptr){
-    uint8_t i2c_address = *((uint8_t*) intf_ptr);
+    I2CInterfaceData i2c_data = *((I2CInterfaceData*) intf_ptr);
     
-    Wire.beginTransmission(i2c_address);
-    Wire.write(reg_addr);
-    uint8_t i2c_status = Wire.endTransmission();
+    i2c_data.i2c->beginTransmission(i2c_data.i2c_address);
+    i2c_data.i2c->write(reg_addr);
+    uint8_t i2c_status = i2c_data.i2c->endTransmission();
     if (i2c_status != BME280_OK) return BME280_E_COMM_FAIL;
 
     uint32_t index = 0;
@@ -21,15 +21,15 @@ int8_t i2c_read(uint8_t reg_addr, uint8_t* data, uint32_t len, void* intf_ptr){
         // request bytes for reading
         // note: using 32 instead of BUFFER_LENGTH ... 
         uint32_t request = min(32, len);
-        Wire.requestFrom(i2c_address, request);
+        i2c_data.i2c->requestFrom(i2c_data.i2c_address, request);
 
         // avaialable bytes for reading
-        uint32_t available = Wire.available();
+        uint32_t available = i2c_data.i2c->available();
         if (available == 0) return BME280_E_COMM_FAIL;
 
         len -= available;
         while (available > 0){
-            data[index++] = Wire.read();
+            data[index++] = i2c_data.i2c->read();
             available--;
         }
     }
@@ -38,13 +38,14 @@ int8_t i2c_read(uint8_t reg_addr, uint8_t* data, uint32_t len, void* intf_ptr){
 }
 
 int8_t i2c_write(uint8_t reg_addr, const uint8_t* data, uint32_t len, void* intf_ptr){
-    uint8_t i2c_address = *((uint8_t*) intf_ptr);
+    I2CInterfaceData i2c_data = *((I2CInterfaceData*) intf_ptr);
+
     int8_t status = BME280_OK;
 
-    Wire.beginTransmission(i2c_address);
-    Wire.write(reg_addr);
-    Wire.write(data, len);
-    uint8_t i2c_status = Wire.endTransmission();
+    i2c_data.i2c->beginTransmission(i2c_data.i2c_address);
+    i2c_data.i2c->write(reg_addr);
+    i2c_data.i2c->write(data, len);
+    uint8_t i2c_status = i2c_data.i2c->endTransmission();
     if (i2c_status != 0)
         status = BME280_E_COMM_FAIL;
 
@@ -55,19 +56,17 @@ Melopero_BME280::Melopero_BME280(){
     //Empty :(
 }
 
-int8_t Melopero_BME280::init_device(uint8_t i2c_address){
+int8_t Melopero_BME280::init_device(uint8_t i2c_address, TwoWire &bus){
     // Setup device address (interface pointer)
-    dev_address = i2c_address;
+    i2c_interface.i2c_address = i2c_address;
+    i2c_interface.i2c = &bus;
 
     // Setup device struct
     dev.intf = BME280_I2C_INTF;
     dev.read = i2c_read;
     dev.write = i2c_write;
     dev.delay_us = delay_us;
-    dev.intf_ptr = &dev_address;
-
-    // Setup Wire library...
-    Wire.begin();
+    dev.intf_ptr = &i2c_interface;
 
     // Initialize the bme280
     int8_t rslt = bme280_init(&dev);

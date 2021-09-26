@@ -1,4 +1,5 @@
 #include "Melopero_BME280.h"
+#include "Wire.h"
 
 Melopero_BME280 sensor;
 
@@ -6,8 +7,12 @@ void setup() {
   Serial.begin(9600);
   while(!Serial);
   
+  Wire.begin();
+
   int8_t status = BME280_OK;
-  status = sensor.init_device();
+  status = sensor.init_device(); // sensor.init_device(i2c_address, i2c_bus);
+  // use : sensor.init_device(address, Wire1); to use Wire1 instead of Wire.
+
   checkStatus(status);
   status = sensor.set_indoor_navigation_configuration();
   checkStatus(status);
